@@ -10,6 +10,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/rohikuma/prdesk/internal/config"
 	"github.com/rohikuma/prdesk/internal/github"
 	"github.com/rohikuma/prdesk/internal/render"
+	"github.com/rohikuma/prdesk/internal/server"
 	"github.com/rohikuma/prdesk/internal/triage"
 )
 
@@ -35,6 +37,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			os.Exit(1)
 		}
+	case "serve":
+		if err := runServe(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			os.Exit(1)
+		}
 	default:
 		usage()
 		os.Exit(2)
@@ -42,7 +49,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: prdesk <triage> [flags]")
+	fmt.Fprintln(os.Stderr, "usage: prdesk <triage|serve> [flags]")
 }
 
 func runTriage(args []string) error {
@@ -72,13 +79,9 @@ func runTriage(args []string) error {
 	defer stop()
 
 	client := github.NewClient(token)
-	var all []github.PullRequest
-	for _, repo := range cfg.Repos { // sequential for now; step 5 makes this concurrent
-		prs, err := client.FetchOpenPRs(ctx, repo)
-		if err != nil {
-			return err
-		}
-		all = append(all, prs...)
+	all, err := client.FetchRepos(ctx, cfg.Repos)
+	if err != nil {
+		return err
 	}
 
 	now := time.Now()
@@ -108,4 +111,56 @@ func parseBuckets(csv string) (map[triage.Bucket]bool, error) {
 		only[b] = true
 	}
 	return only, nil
+}
+
+func runServe(args []string) error {
+	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	cfgPath := fs.String("config", "config.yaml", "path to config file")
+	addr := fs.String("addr", "127.0.0.1:8080", "listen address (localhost only by default)")
+	ttl := fs.Duration("ttl", 2*time.Minute, "how long fetched data is reused before asking GitHub again")
+	refresh := fs.Duration("refresh", time.Minute, "how often the browser re-polls the dashboard")
+	fs.Parse(args)
+
+	cfg, err := config.Load(*cfgPath)
+	if err != nil {
+		return err
+	}
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return errors.New("GITHUB_TOKEN is not set")
+	}
+
+	client := github.NewClient(token)
+	srv, err := server.New(cfg, func(ctx context.Context) ([]github.PullRequest, error) {
+		return client.FetchRepos(ctx, cfg.Repos)
+	}, *ttl, *refresh)
+	if err != nil {
+		return err
+	}
+
+	httpSrv := &http.Server{
+		Addr:              *addr,
+		Handler:           srv.Handler(),
+		ReadHeaderTimeout: 5 * time.Second, // guards against slowloris clients
+	}
+
+	// Graceful shutdown: on Ctrl-C, stop accepting connections, let in-flight
+	// requests finish (up to 5s), then exit.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		<-ctx.Done()
+		shutCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		httpSrv.Shutdown(shutCtx)
+	}()
+
+	fmt.Printf("prdesk dashboard: http://%s  (Ctrl-C to stop)\n", *addr)
+	if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	<-done
+	return nil
 }

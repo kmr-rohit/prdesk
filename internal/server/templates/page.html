@@ -1,0 +1,118 @@
+{{define "page"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>prdesk</title>
+<style>
+  :root {
+    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --card: #ffffff;
+    --accent: #2563eb; --warn-bg: #fef3c7; --warn-fg: #92400e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141413; --fg: #e7e5e4; --muted: #a8a29e; --line: #292524; --card: #1c1917;
+      --accent: #60a5fa; --warn-bg: #3b2f0b; --warn-fg: #fcd34d;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 16px; }
+  h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+  .meta { color: var(--muted); font-size: 13px; }
+  button { font: inherit; font-size: 13px; color: var(--accent); background: none;
+           border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  .htmx-request button { opacity: .5; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; padding: 0; list-style: none; }
+  .chips a { display: inline-block; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px;
+             color: var(--fg); text-decoration: none; font-size: 13px; background: var(--card); }
+  .chips a:hover { border-color: var(--accent); }
+  .chips b { font-variant-numeric: tabular-nums; margin-left: 4px; }
+  .banner { background: var(--warn-bg); color: var(--warn-fg); padding: 8px 12px; border-radius: 6px;
+            margin-bottom: 16px; font-size: 13px; }
+  details { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; }
+  summary { cursor: pointer; padding: 10px 14px; font-weight: 600; list-style-position: inside; }
+  summary .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
+  summary .blurb { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  .scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; white-space: nowrap; }
+  td.num, td.age { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  td.age, td.author { color: var(--muted); }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .draft { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px;
+           padding: 0 4px; margin-left: 6px; }
+  .empty { text-align: center; color: var(--muted); padding: 48px 0; }
+  @media (max-width: 640px) { .blurb { display: none; } th, td { padding: 6px 8px; } }
+</style>
+<script src="/static/htmx.min.js"></script>
+</head>
+<body>
+<main>
+{{template "board" .}}
+</main>
+<script>
+  // Remember which sections the user opened/closed across auto-refreshes.
+  (function () {
+    var KEY = "prdesk.sections";
+    function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
+    function save(m) { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) {} }
+    function apply() {
+      var m = load();
+      document.querySelectorAll("details[id]").forEach(function (d) {
+        if (d.id in m) d.open = m[d.id];
+        d.ontoggle = function () { var s = load(); s[d.id] = d.open; save(s); };
+      });
+    }
+    document.addEventListener("htmx:afterSwap", apply);
+    apply();
+  })();
+</script>
+</body>
+</html>{{end}}
+
+{{define "board"}}<div id="board" hx-get="/board" hx-trigger="every {{.RefreshSecs}}s" hx-swap="outerHTML">
+  <header>
+    <h1>prdesk</h1>
+    <span class="meta">{{.Login}} · {{.Repos}} · {{.Total}} open · updated {{.Updated}}</span>
+    <button hx-post="/refresh" hx-target="#board" hx-swap="outerHTML">Refresh now</button>
+  </header>
+
+  {{if .Err}}<div class="banner">Could not reach GitHub, showing the last good data. {{.Err}}</div>{{end}}
+
+  {{if .Sections}}
+  <ul class="chips">
+    {{range .Sections}}<li><a href="#{{.ID}}">{{.Title}}<b>{{len .Rows}}</b></a></li>{{end}}
+  </ul>
+
+  {{range .Sections}}
+  <details id="{{.ID}}"{{if not .Collapsed}} open{{end}}>
+    <summary>{{.Title}}<span class="count">{{len .Rows}}</span><span class="blurb">{{.Blurb}}</span></summary>
+    <div class="scroll">
+    <table>
+      <thead><tr><th>PR</th><th>Title</th><th>Author</th><th>Age</th><th>Active</th><th>Suggested action</th></tr></thead>
+      <tbody>
+      {{range .Rows}}
+        <tr>
+          <td class="num"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Ref}}</a></td>
+          <td>{{.Title}}{{if .Draft}}<span class="draft">draft</span>{{end}}</td>
+          <td class="author">{{.Author}}</td>
+          <td class="age">{{.Age}}</td>
+          <td class="age">{{.Active}}</td>
+          <td>{{.Action}}</td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    </div>
+  </details>
+  {{end}}
+  {{else if not .Err}}
+  <p class="empty">Nothing needs your attention.</p>
+  {{end}}
+</div>{{end}}

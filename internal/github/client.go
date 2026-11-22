@@ -152,3 +152,17 @@ func truncate(s string, n int) string {
 	}
 	return s[:n] + "..."
 }
+
+// FetchRepos fetches open PRs for every repo. Sequential for now; step 5
+// makes this concurrent with a limit.
+func (c *Client) FetchRepos(ctx context.Context, repos []string) ([]PullRequest, error) {
+	var all []PullRequest
+	for _, repo := range repos {
+		prs, err := c.FetchOpenPRs(ctx, repo)
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, prs...)
+	}
+	return all, nil
+}
