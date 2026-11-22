@@ -34,6 +34,7 @@ func (a *actor) name() string {
 type prNode struct {
 	Number            int       `json:"number"`
 	Title             string    `json:"title"`
+	Body              string    `json:"body"`
 	URL               string    `json:"url"`
 	IsDraft           bool      `json:"isDraft"`
 	CreatedAt         time.Time `json:"createdAt"`
@@ -98,6 +99,7 @@ func (n prNode) toPullRequest(repo string, ignoredChecks []string) PullRequest {
 		Repo:              repo,
 		Number:            n.Number,
 		Title:             n.Title,
+		Body:              truncateRunes(n.Body, 4000),
 		URL:               n.URL,
 		Draft:             n.IsDraft,
 		Author:            n.Author.name(),
@@ -145,4 +147,11 @@ func (n prNode) toPullRequest(repo string, ignoredChecks []string) PullRequest {
 		}
 	}
 	return pr
+}
+
+func truncateRunes(s string, n int) string {
+	if r := []rune(s); len(r) > n {
+		return string(r[:n])
+	}
+	return s
 }

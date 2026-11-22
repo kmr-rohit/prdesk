@@ -43,6 +43,7 @@ type Options struct {
 	ReadyLabels          []string // ALL must be present for ready-to-merge
 	EvalCommand          string   // e.g. "/eval"; empty disables needs-eval
 	EvalPaths            []string // if set, only PRs touching these prefixes need eval
+	Approver             string   // login who runs /ok-to-test and /eval for me
 	NewContributorWindow time.Duration
 	Now                  time.Time
 }
@@ -56,6 +57,7 @@ func OptionsFromConfig(c *config.Config, now time.Time) Options {
 		ReadyLabels:          c.ReadyLabels,
 		EvalCommand:          c.EvalCommand,
 		EvalPaths:            c.EvalPaths,
+		Approver:             c.Approver,
 		NewContributorWindow: 7 * 24 * time.Hour,
 		Now:                  now,
 	}
@@ -71,6 +73,7 @@ type Finding struct {
 type Result struct {
 	PR       github.PullRequest `json:"pr"`
 	Findings []Finding          `json:"findings"`
+	Step     Step               `json:"step"` // where this PR is in my review workflow
 }
 
 // In reports whether the PR is in bucket b, and the suggested action.
@@ -106,7 +109,7 @@ var rules = []struct {
 
 // Classify runs every rule against one PR.
 func Classify(pr github.PullRequest, o Options) Result {
-	res := Result{PR: pr}
+	res := Result{PR: pr, Step: NextStep(pr, o)}
 	for _, r := range rules {
 		if action, ok := r.fn(pr, o); ok {
 			res.Findings = append(res.Findings, Finding{Bucket: r.bucket, Action: action})

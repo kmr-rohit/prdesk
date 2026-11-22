@@ -10,6 +10,7 @@ type PullRequest struct {
 	Repo              string    `json:"repo"` // "owner/name"
 	Number            int       `json:"number"`
 	Title             string    `json:"title"`
+	Body              string    `json:"body"` // description, truncated
 	URL               string    `json:"url"`
 	Draft             bool      `json:"draft"`
 	Author            string    `json:"author"`

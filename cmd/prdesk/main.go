@@ -7,15 +7,18 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/rohikuma/prdesk/internal/ai"
 	"github.com/rohikuma/prdesk/internal/config"
 	"github.com/rohikuma/prdesk/internal/github"
 	"github.com/rohikuma/prdesk/internal/render"
@@ -37,6 +40,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, "error:", err)
 			os.Exit(1)
 		}
+	case "analyze":
+		if err := runAnalyze(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			os.Exit(1)
+		}
 	case "serve":
 		if err := runServe(os.Args[2:]); err != nil {
 			fmt.Fprintln(os.Stderr, "error:", err)
@@ -49,7 +57,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: prdesk <triage|serve> [flags]")
+	fmt.Fprintln(os.Stderr, "usage: prdesk <triage|serve|analyze> [flags]")
 }
 
 func runTriage(args []string) error {
@@ -137,6 +145,10 @@ func runServe(args []string) error {
 	if err != nil {
 		return err
 	}
+	if cfg.AI.Enabled {
+		srv.WithAI(ai.NewOllama(cfg.AI.URL, cfg.AI.Model), diffFetcher(client, cfg), cfg.AI.Model)
+		fmt.Printf("AI analysis on: %s via %s\n", cfg.AI.Model, cfg.AI.URL)
+	}
 
 	httpSrv := &http.Server{
 		Addr:              *addr,
@@ -163,4 +175,70 @@ func runServe(args []string) error {
 	}
 	<-done
 	return nil
+}
+
+// diffFetcher adapts the GitHub client to the server's DiffFunc.
+func diffFetcher(client *github.Client, cfg *config.Config) server.DiffFunc {
+	return func(ctx context.Context, repo string, n int) (string, bool, error) {
+		return client.FetchDiff(ctx, repo, n, int64(cfg.AI.MaxDiffChars))
+	}
+}
+
+// runAnalyze: `prdesk analyze 296` prints the AI review of one PR, handy for
+// trying the model without the dashboard.
+func runAnalyze(args []string) error {
+	fs := flag.NewFlagSet("analyze", flag.ExitOnError)
+	cfgPath := fs.String("config", "config.yaml", "path to config file")
+	repo := fs.String("repo", "", "owner/name (default: first repo in config)")
+	fs.Parse(args)
+	if fs.NArg() != 1 {
+		return errors.New("usage: prdesk analyze [--repo owner/name] <pr-number>")
+	}
+	number, err := strconv.Atoi(fs.Arg(0))
+	if err != nil {
+		return fmt.Errorf("bad PR number %q", fs.Arg(0))
+	}
+
+	cfg, err := config.Load(*cfgPath)
+	if err != nil {
+		return err
+	}
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return errors.New("GITHUB_TOKEN is not set")
+	}
+	if *repo == "" {
+		*repo = cfg.Repos[0]
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	client := github.NewClient(token)
+	prs, err := client.FetchOpenPRs(ctx, *repo)
+	if err != nil {
+		return err
+	}
+	for _, pr := range prs {
+		if pr.Number != number {
+			continue
+		}
+		diff, truncated, err := diffFetcher(client, cfg)(ctx, *repo, number)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "warning: no diff:", err)
+		}
+		fmt.Fprintf(os.Stderr, "asking %s about %s#%d (diff %d bytes, truncated=%v)...\n", cfg.AI.Model, *repo, number, len(diff), truncated)
+		start := time.Now()
+		a, err := ai.NewOllama(cfg.AI.URL, cfg.AI.Model).Analyze(ctx, ai.InputFromPR(pr, diff, truncated, cfg.EvalPaths))
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(os.Stderr, "done in %s\n", time.Since(start).Round(time.Second))
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(a)
+	}
+	return fmt.Errorf("PR #%d is not open in %s", number, *repo)
 }

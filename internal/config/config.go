@@ -30,6 +30,17 @@ type Config struct {
 	EvalCommand string `yaml:"eval_command"`
 	// If set, needs-eval only fires for PRs changing a file under one of these prefixes.
 	EvalPaths []string `yaml:"eval_paths"`
+	// GitHub login of the maintainer who runs /ok-to-test and /eval for you.
+	Approver string `yaml:"approver"`
+	// Optional local-LLM analysis of PRs (Ollama).
+	AI AIConfig `yaml:"ai"`
+}
+
+type AIConfig struct {
+	Enabled      bool   `yaml:"enabled"`
+	URL          string `yaml:"url"`            // Ollama base URL
+	Model        string `yaml:"model"`          // e.g. gemma4:26b-a4b
+	MaxDiffChars int    `yaml:"max_diff_chars"` // diff is truncated to this before prompting
 }
 
 // Load reads path, applies defaults and validates.
@@ -50,6 +61,15 @@ func Load(path string) (*Config, error) {
 
 	if c.StaleDays == 0 {
 		c.StaleDays = 14
+	}
+	if c.AI.URL == "" {
+		c.AI.URL = "http://localhost:11434"
+	}
+	if c.AI.Model == "" {
+		c.AI.Model = "gemma4:26b-a4b"
+	}
+	if c.AI.MaxDiffChars == 0 {
+		c.AI.MaxDiffChars = 24000
 	}
 	if len(c.ReadyLabels) == 0 {
 		c.ReadyLabels = []string{"lgtm", "approved"}

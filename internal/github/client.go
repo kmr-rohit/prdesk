@@ -11,7 +11,10 @@ import (
 	"time"
 )
 
-const defaultEndpoint = "https://api.github.com/graphql"
+const (
+	defaultEndpoint = "https://api.github.com/graphql"
+	defaultREST     = "https://api.github.com"
+)
 
 // Client talks to the GitHub GraphQL API.
 //
@@ -19,7 +22,8 @@ const defaultEndpoint = "https://api.github.com/graphql"
 // the convention. Exported fields (Endpoint) can be changed by callers; we use
 // that in tests to point the client at a fake local server.
 type Client struct {
-	Endpoint string
+	Endpoint string // GraphQL
+	RESTBase string // REST root, used for diffs
 	// IgnoredChecks are check/status names excluded from CheckState. Default
 	// {"tide"}: Prow's merge gate is "pending" on nearly every PR by design.
 	IgnoredChecks []string
@@ -30,6 +34,7 @@ type Client struct {
 func NewClient(token string) *Client {
 	return &Client{
 		Endpoint:      defaultEndpoint,
+		RESTBase:      defaultREST,
 		IgnoredChecks: []string{"tide"},
 		token:         token,
 		http:          &http.Client{Timeout: 30 * time.Second},
@@ -44,7 +49,7 @@ query($owner: String!, $name: String!, $cursor: String) {
                  orderBy: {field: UPDATED_AT, direction: DESC}) {
       pageInfo { hasNextPage endCursor }
       nodes {
-        number title url isDraft createdAt updatedAt
+        number title body url isDraft createdAt updatedAt
         authorAssociation reviewDecision mergeable headRefOid
         author { login }
         labels(first: 30) { nodes { name } }
@@ -165,4 +170,37 @@ func (c *Client) FetchRepos(ctx context.Context, repos []string) ([]PullRequest,
 		all = append(all, prs...)
 	}
 	return all, nil
+}
+
+// FetchDiff returns the unified diff of a PR, cut to maxBytes. truncated
+// reports whether anything was dropped.
+//
+// GO LESSON 15: io.LimitReader caps how much we read from a response body, so a
+// gigantic PR cannot exhaust memory. We read one extra byte to detect overflow.
+func (c *Client) FetchDiff(ctx context.Context, repo string, number int, maxBytes int64) (diff string, truncated bool, err error) {
+	url := fmt.Sprintf("%s/repos/%s/pulls/%d", c.RESTBase, repo, number)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", false, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("Accept", "application/vnd.github.v3.diff")
+
+	res, err := c.http.Do(req)
+	if err != nil {
+		return "", false, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(io.LimitReader(res.Body, 300))
+		return "", false, fmt.Errorf("fetching diff for %s#%d: %s: %s", repo, number, res.Status, truncate(string(b), 200))
+	}
+	raw, err := io.ReadAll(io.LimitReader(res.Body, maxBytes+1))
+	if err != nil {
+		return "", false, err
+	}
+	if int64(len(raw)) > maxBytes {
+		return string(raw[:maxBytes]), true, nil
+	}
+	return string(raw), false, nil
 }

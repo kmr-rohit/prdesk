@@ -6,26 +6,30 @@
 <title>prdesk</title>
 <style>
   :root {
-    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --card: #ffffff;
+    --bg: #fafaf9; --fg: #1c1917; --muted: #78716c; --line: #e7e5e4; --card: #ffffff; --soft: #f5f5f4;
     --accent: #2563eb; --warn-bg: #fef3c7; --warn-fg: #92400e;
+    --ok-bg: #dcfce7; --ok-fg: #166534; --bad-bg: #fee2e2; --bad-fg: #991b1b; --mid-bg: #fef3c7; --mid-fg: #92400e;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #141413; --fg: #e7e5e4; --muted: #a8a29e; --line: #292524; --card: #1c1917;
+      --bg: #141413; --fg: #e7e5e4; --muted: #a8a29e; --line: #292524; --card: #1c1917; --soft: #232120;
       --accent: #60a5fa; --warn-bg: #3b2f0b; --warn-fg: #fcd34d;
+      --ok-bg: #14301d; --ok-fg: #86efac; --bad-bg: #3b1515; --bad-fg: #fca5a5; --mid-bg: #3b2f0b; --mid-fg: #fcd34d;
     }
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg);
          font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 64px; }
-  header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 16px; }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-bottom: 16px; }
   h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
   .meta { color: var(--muted); font-size: 13px; }
+  .muted { color: var(--muted); }
+  .spacer { flex: 1; }
   button { font: inherit; font-size: 13px; color: var(--accent); background: none;
            border: 1px solid var(--line); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
   button:hover { border-color: var(--accent); }
-  .htmx-request button { opacity: .5; }
+  button:disabled { opacity: .5; cursor: progress; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 24px; padding: 0; list-style: none; }
   .chips a { display: inline-block; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px;
              color: var(--fg); text-decoration: none; font-size: 13px; background: var(--card); }
@@ -33,21 +37,48 @@
   .chips b { font-variant-numeric: tabular-nums; margin-left: 4px; }
   .banner { background: var(--warn-bg); color: var(--warn-fg); padding: 8px 12px; border-radius: 6px;
             margin-bottom: 16px; font-size: 13px; }
+
   details { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 16px; }
-  summary { cursor: pointer; padding: 10px 14px; font-weight: 600; list-style-position: inside; }
-  summary .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
-  summary .blurb { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 8px; }
+  summary { display: flex; align-items: baseline; gap: 6px; cursor: pointer; padding: 10px 14px;
+            font-weight: 600; list-style: none; user-select: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary .count { color: var(--muted); font-weight: 400; }
+  summary .blurb { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+  summary .chev { margin-left: auto; align-self: center; width: 8px; height: 8px; flex: none;
+                  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+                  transform: rotate(45deg); transition: transform .15s; margin-right: 4px; }
+  details[open] > summary .chev { transform: rotate(-135deg); }
+  summary:hover .chev { border-color: var(--accent); }
+
   .scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { text-align: left; padding: 6px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+  th, td { text-align: left; padding: 8px 14px; border-top: 1px solid var(--line); vertical-align: top; }
   th { color: var(--muted); font-weight: 500; font-size: 12px; white-space: nowrap; }
   td.num, td.age { white-space: nowrap; font-variant-numeric: tabular-nums; }
   td.age, td.author { color: var(--muted); }
+  td.title { min-width: 280px; }
+  td.next { min-width: 230px; }
+  .why { color: var(--muted); font-size: 12px; }
+  .copy { margin-top: 4px; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
   .draft { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px;
            padding: 0 4px; margin-left: 6px; }
   .empty { text-align: center; color: var(--muted); padding: 48px 0; }
+
+  .ai { margin-top: 6px; }
+  .ai-card { background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px;
+             font-size: 13px; margin-top: 4px; }
+  .ai-card p { margin: 6px 0; }
+  .ai-card ul { margin: 2px 0 6px; padding-left: 18px; }
+  .ai-card blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid var(--line); white-space: pre-wrap; }
+  .ai-card b { font-size: 12px; }
+  .ai-err { color: var(--bad-fg); font-size: 12px; margin-bottom: 4px; }
+  .pill { display: inline-block; font-size: 11px; padding: 0 7px; border-radius: 999px; background: var(--line);
+          margin-right: 4px; }
+  .risk-low, .verdict-approve { background: var(--ok-bg); color: var(--ok-fg); }
+  .risk-medium, .verdict-needs_discussion { background: var(--mid-bg); color: var(--mid-fg); }
+  .risk-high, .verdict-request_changes { background: var(--bad-bg); color: var(--bad-fg); }
   @media (max-width: 640px) { .blurb { display: none; } th, td { padding: 6px 8px; } }
 </style>
 <script src="/static/htmx.min.js"></script>
@@ -57,11 +88,12 @@
 {{template "board" .}}
 </main>
 <script>
-  // Remember which sections the user opened/closed across auto-refreshes.
   (function () {
     var KEY = "prdesk.sections";
     function load() { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } }
     function save(m) { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) {} }
+
+    // Remember which sections are open/closed, across refreshes and reloads.
     function apply() {
       var m = load();
       document.querySelectorAll("details[id]").forEach(function (d) {
@@ -71,6 +103,33 @@
     }
     document.addEventListener("htmx:afterSwap", apply);
     apply();
+
+    document.addEventListener("click", function (e) {
+      var t = e.target.closest("[data-copy], [data-fold]");
+      if (!t) return;
+      if (t.hasAttribute("data-fold")) {
+        var open = t.getAttribute("data-fold") === "open";
+        document.querySelectorAll("details[id]").forEach(function (d) { d.open = open; });
+        return;
+      }
+      copy(t.getAttribute("data-copy"), t);
+    });
+
+    function copy(text, btn) {
+      var done = function () {
+        var old = btn.textContent; btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = old; }, 1200);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, function () { fallback(text, done); });
+      } else { fallback(text, done); }
+    }
+    function fallback(text, done) {
+      var ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
   })();
 </script>
 </body>
@@ -80,7 +139,10 @@
   <header>
     <h1>prdesk</h1>
     <span class="meta">{{.Login}} · {{.Repos}} · {{.Total}} open · updated {{.Updated}}</span>
-    <button hx-post="/refresh" hx-target="#board" hx-swap="outerHTML">Refresh now</button>
+    <span class="spacer"></span>
+    <button type="button" data-fold="closed">Collapse all</button>
+    <button type="button" data-fold="open">Expand all</button>
+    <button hx-post="/refresh" hx-target="#board" hx-swap="outerHTML" hx-disabled-elt="this">Refresh now</button>
   </header>
 
   {{if .Err}}<div class="banner">Could not reach GitHub, showing the last good data. {{.Err}}</div>{{end}}
@@ -92,19 +154,23 @@
 
   {{range .Sections}}
   <details id="{{.ID}}"{{if not .Collapsed}} open{{end}}>
-    <summary>{{.Title}}<span class="count">{{len .Rows}}</span><span class="blurb">{{.Blurb}}</span></summary>
+    <summary>{{.Title}}<span class="count">{{len .Rows}}</span><span class="blurb">{{.Blurb}}</span><span class="chev" aria-hidden="true"></span></summary>
     <div class="scroll">
     <table>
-      <thead><tr><th>PR</th><th>Title</th><th>Author</th><th>Age</th><th>Active</th><th>Suggested action</th></tr></thead>
+      <thead><tr><th>PR</th><th>Title</th><th>Author</th><th>Age</th><th>Active</th><th>Next step</th></tr></thead>
       <tbody>
       {{range .Rows}}
         <tr>
           <td class="num"><a href="{{.URL}}" target="_blank" rel="noopener">{{.Ref}}</a></td>
-          <td>{{.Title}}{{if .Draft}}<span class="draft">draft</span>{{end}}</td>
+          <td class="title">{{.Title}}{{if .Draft}}<span class="draft">draft</span>{{end}}
+            {{with .AI}}<div class="ai" id="{{.ID}}">{{template "aibox" .}}</div>{{end}}
+          </td>
           <td class="author">{{.Author}}</td>
           <td class="age">{{.Age}}</td>
           <td class="age">{{.Active}}</td>
-          <td>{{.Action}}</td>
+          <td class="next">{{.Action}}{{if .Why}}<div class="why">{{.Why}}</div>{{end}}
+            {{if .CopyText}}<div class="copy"><button type="button" data-copy="{{.CopyText}}">{{.CopyLabel}}</button></div>{{end}}
+          </td>
         </tr>
       {{end}}
       </tbody>
@@ -116,3 +182,25 @@
   <p class="empty">Nothing needs your attention.</p>
   {{end}}
 </div>{{end}}
+
+{{define "aibox"}}{{if .Err}}<div class="ai-err">AI failed: {{.Err}}</div>{{end}}{{if .HasResult}}
+<div class="ai-card">
+  <div>
+    <span class="pill risk-{{.Result.Risk}}">risk: {{.Result.Risk}}</span>
+    <span class="pill verdict-{{.Result.Verdict}}">{{.Result.Verdict}}</span>
+    {{if .Result.NeedsEval}}<span class="pill">needs eval</span>{{end}}
+    <span class="muted">AI draft by {{.Model}}, advisory only</span>
+  </div>
+  <p>{{.Result.Summary}}</p>
+  {{if .Result.EvalReason}}<p class="muted">Eval: {{.Result.EvalReason}}</p>{{end}}
+  {{if .Result.ReviewFocus}}<b>Check by hand</b><ul>{{range .Result.ReviewFocus}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  {{if .Result.Concerns}}<b>Concerns</b><ul>{{range .Result.Concerns}}<li>{{.}}</li>{{end}}</ul>{{end}}
+  {{if .Result.DraftComment}}<b>Draft comment</b><blockquote>{{.Result.DraftComment}}</blockquote>
+  <button type="button" data-copy="{{.Result.DraftComment}}">Copy draft comment</button>{{end}}
+</div>
+{{else}}
+<button type="button" hx-post="{{.Path}}" hx-target="#{{.ID}}" hx-swap="innerHTML" hx-indicator="#{{.ID}}-wait" hx-disabled-elt="this">{{if .Err}}Retry{{else}}Analyze with AI{{end}}</button>
+<span class="htmx-indicator muted" id="{{.ID}}-wait">Reading the diff with {{.Model}}, this can take a minute…</span>
+{{end}}{{end}}
+
+{{define "ai"}}{{template "aibox" .}}{{end}}

@@ -10,9 +10,12 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"github.com/rohikuma/prdesk/internal/ai"
 	"github.com/rohikuma/prdesk/internal/config"
 	"github.com/rohikuma/prdesk/internal/github"
 	"github.com/rohikuma/prdesk/internal/render"
@@ -29,12 +32,31 @@ var assets embed.FS
 // concrete GitHub client) lets tests plug in a fake: no network, no token.
 type FetchFunc func(ctx context.Context) ([]github.PullRequest, error)
 
+// DiffFunc fetches a PR's diff (cut to a size limit).
+type DiffFunc func(ctx context.Context, repo string, number int) (diff string, truncated bool, err error)
+
+// Analyzer is the one method the server needs from an AI backend.
+//
+// GO LESSON 16: interfaces are satisfied implicitly. *ai.Ollama has an Analyze
+// method with this exact shape, so it IS an Analyzer: no "implements" keyword.
+// Tests pass a fake that returns canned answers.
+type Analyzer interface {
+	Analyze(ctx context.Context, in ai.Input) (ai.Analysis, error)
+}
+
 // snapshot is the last known state shown to every visitor.
 type snapshot struct {
 	results   []triage.Result
 	fetchedAt time.Time // last SUCCESSFUL fetch
 	checkedAt time.Time // last attempt (success or not); drives the TTL
 	err       error     // error from the last attempt, if any
+}
+
+// aiEntry is one analysis, possibly still running.
+type aiEntry struct {
+	done chan struct{} // closed when res/err are set
+	res  ai.Analysis
+	err  error
 }
 
 type Server struct {
@@ -49,16 +71,29 @@ type Server struct {
 	// means ten simultaneous visitors cause ONE GitHub fetch, not ten.
 	mu   sync.Mutex
 	snap snapshot
+
+	// Optional AI. Analyses are cached per PR *and head commit*, so a new push
+	// naturally invalidates the old analysis.
+	analyzer Analyzer
+	diff     DiffFunc
+	aiModel  string
+	aiMu     sync.Mutex
+	aiCache  map[string]*aiEntry
 }
 
 func New(cfg *config.Config, fetch FetchFunc, ttl, refresh time.Duration) (*Server, error) {
-	// html/template (not text/template) escapes by context. PR titles are
-	// attacker-controlled text; "<script>" in a title renders as harmless text.
+	// html/template (not text/template) escapes by context. PR titles and model
+	// output are untrusted; "<script>" in either renders as harmless text.
 	tmpl, err := template.ParseFS(assets, "templates/page.html")
 	if err != nil {
 		return nil, err
 	}
-	return &Server{cfg: cfg, fetch: fetch, ttl: ttl, refresh: refresh, tmpl: tmpl}, nil
+	return &Server{cfg: cfg, fetch: fetch, ttl: ttl, refresh: refresh, tmpl: tmpl, aiCache: map[string]*aiEntry{}}, nil
+}
+
+// WithAI turns on the "Analyze" buttons.
+func (s *Server) WithAI(a Analyzer, diff DiffFunc, model string) {
+	s.analyzer, s.diff, s.aiModel = a, diff, model
 }
 
 // Handler wires URL paths to functions.
@@ -69,6 +104,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /{$}", s.page)            // full page
 	mux.HandleFunc("GET /board", s.board)         // htmx polls this
 	mux.HandleFunc("POST /refresh", s.refreshNow) // "Refresh now" button
+	mux.HandleFunc("POST /ai/{owner}/{name}/{number}", s.analyze)
 	mux.HandleFunc("GET /api/triage.json", s.apiJSON)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { fmt.Fprintln(w, "ok") })
 	return mux
@@ -132,11 +168,137 @@ func (s *Server) renderTemplate(w http.ResponseWriter, name string, data any) {
 	w.Write(buf.Bytes())
 }
 
+// ---- AI --------------------------------------------------------------------
+
+func aiKey(pr github.PullRequest) string {
+	return fmt.Sprintf("%s#%d@%s", pr.Repo, pr.Number, pr.HeadSHA)
+}
+
+// analyze runs (or joins, or reuses) the analysis of one PR and returns the
+// result fragment that htmx drops into the row.
+func (s *Server) analyze(w http.ResponseWriter, r *http.Request) {
+	if s.analyzer == nil {
+		http.Error(w, "AI is not enabled", http.StatusNotFound)
+		return
+	}
+	repo := r.PathValue("owner") + "/" + r.PathValue("name")
+	number, err := strconv.Atoi(r.PathValue("number"))
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	pr, ok := s.findPR(repo, number)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+
+	res, err := s.runAnalysis(r.Context(), pr)
+	v := aiView{ID: aiDomID(pr), Path: aiPath(pr), Model: s.aiModel}
+	if err != nil {
+		v.Err = err.Error()
+	} else {
+		v.Result, v.HasResult = res, true
+	}
+	s.renderTemplate(w, "ai", v)
+}
+
+func (s *Server) findPR(repo string, number int) (github.PullRequest, bool) {
+	snap := s.current(false)
+	for _, r := range snap.results {
+		if r.PR.Repo == repo && r.PR.Number == number {
+			return r.PR, true
+		}
+	}
+	return github.PullRequest{}, false
+}
+
+// runAnalysis starts the model call at most once per (PR, head commit). Every
+// concurrent caller waits on the same entry. The work uses its own context, so
+// closing the browser tab does not throw away a minute of GPU time; the result
+// is cached and appears on the next refresh.
+func (s *Server) runAnalysis(ctx context.Context, pr github.PullRequest) (ai.Analysis, error) {
+	key := aiKey(pr)
+
+	s.aiMu.Lock()
+	e, exists := s.aiCache[key]
+	if !exists {
+		e = &aiEntry{done: make(chan struct{})}
+		s.aiCache[key] = e
+		go func() {
+			bg, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+			defer cancel()
+			e.res, e.err = s.analyzeNow(bg, pr)
+			if e.err != nil {
+				s.aiMu.Lock()
+				delete(s.aiCache, key) // failures are not cached: allow retry
+				s.aiMu.Unlock()
+			}
+			close(e.done)
+		}()
+	}
+	s.aiMu.Unlock()
+
+	select {
+	case <-e.done:
+		return e.res, e.err
+	case <-ctx.Done():
+		return ai.Analysis{}, ctx.Err()
+	}
+}
+
+func (s *Server) analyzeNow(ctx context.Context, pr github.PullRequest) (ai.Analysis, error) {
+	var diff string
+	var truncated bool
+	if s.diff != nil {
+		d, t, err := s.diff(ctx, pr.Repo, pr.Number)
+		if err != nil {
+			// Still useful without the diff: the prompt says it is unavailable.
+			log.Printf("diff for %s#%d unavailable: %v", pr.Repo, pr.Number, err)
+		}
+		diff, truncated = d, t
+	}
+	return s.analyzer.Analyze(ctx, ai.InputFromPR(pr, diff, truncated, s.cfg.EvalPaths))
+}
+
+// cachedAnalysis returns a finished analysis without starting one.
+func (s *Server) cachedAnalysis(pr github.PullRequest) (ai.Analysis, bool) {
+	s.aiMu.Lock()
+	defer s.aiMu.Unlock()
+	e, ok := s.aiCache[aiKey(pr)]
+	if !ok {
+		return ai.Analysis{}, false
+	}
+	select {
+	case <-e.done:
+		return e.res, e.err == nil
+	default:
+		return ai.Analysis{}, false // still running
+	}
+}
+
+func aiDomID(pr github.PullRequest) string {
+	return "ai-" + strings.ReplaceAll(pr.Repo, "/", "-") + "-" + strconv.Itoa(pr.Number)
+}
+
+func aiPath(pr github.PullRequest) string {
+	return fmt.Sprintf("/ai/%s/%d", pr.Repo, pr.Number)
+}
+
 // ---- view model ------------------------------------------------------------
 
+type aiView struct {
+	ID, Path, Model string
+	HasResult       bool
+	Result          ai.Analysis
+	Err             string
+}
+
 type row struct {
-	URL, Ref, Title, Author, Age, Active, Action string
-	Draft                                        bool
+	URL, Ref, Title, Author, Age, Active string
+	Action, Why, CopyLabel, CopyText     string
+	Draft                                bool
+	AI                                   *aiView // nil when AI is disabled
 }
 
 type section struct {
@@ -154,22 +316,42 @@ type view struct {
 	RefreshSecs  int
 }
 
-// Display order: things that need ME first, background noise last.
-var layout = []struct {
+// Cross-cutting views: a PR can be here AND in a workflow-stage section.
+var extras = []struct {
 	bucket    triage.Bucket
 	title     string
 	blurb     string
 	collapsed bool
 }{
-	{triage.WaitingOnMe, "Waiting on me", "Review requested, or the author updated since your last review.", false},
-	{triage.NeedsOKToTest, "Needs ok-to-test", "CI is blocked until a maintainer approves the workflow runs.", false},
-	{triage.ReadyToMerge, "Ready to merge", "Labels, checks and merge state all look good.", false},
-	{triage.NeedsCI, "Needs CI", "Checks failed, or none have run.", false},
-	{triage.NeedsEval, "Needs eval", "CI is green and the PR touches eval paths. Comment /eval.", false},
-	{triage.WaitingOnAuthor, "Waiting on author", "Changes requested or merge conflicts.", false},
 	{triage.Agenda, "Community meeting", "Agenda-labelled PRs and new first-time contributors.", false},
 	{triage.Mine, "My PRs", "PRs you authored, with review state.", false},
 	{triage.Stale, "Stale", "No activity for a while.", true},
+}
+
+func (s *Server) stageInfo(st triage.Stage) (title, blurb string, collapsed bool) {
+	who := "the approver"
+	if s.cfg.Approver != "" {
+		who = "@" + s.cfg.Approver
+	}
+	switch st {
+	case triage.StageReview:
+		return "Review needed", "You haven't reviewed yet, or the author pushed after your review.", false
+	case triage.StageApprove:
+		return "Ok to merge from my side", "You approved, CI is green, eval is done or not needed: comment /lgtm.", false
+	case triage.StageAskOKToTest:
+		return "Ask " + who + ": /ok-to-test", "You approved. CI has not run yet.", false
+	case triage.StageAskEval:
+		return "Ask " + who + ": /eval", "CI is green and the change touches eval paths.", false
+	case triage.StageFixCI:
+		return "CI failing: request changes", "Checks failed after your approval.", false
+	case triage.StageWaitAuthor:
+		return "Waiting on author", "Changes requested, or merge conflicts.", false
+	case triage.StageWaitCI:
+		return "CI running", "Nothing to do yet.", true
+	case triage.StageMerge:
+		return "Ready for " + who + " to merge", "lgtm + approved and green.", true
+	}
+	return string(st), "", false
 }
 
 func (s *Server) buildView(snap snapshot) view {
@@ -178,7 +360,7 @@ func (s *Server) buildView(snap snapshot) view {
 
 	v := view{
 		Login:       s.cfg.Login,
-		Repos:       joinRepos(s.cfg.Repos),
+		Repos:       strings.Join(s.cfg.Repos, ", "),
 		Updated:     "never",
 		Total:       len(snap.results),
 		RefreshSecs: int(s.refresh.Seconds()),
@@ -190,32 +372,54 @@ func (s *Server) buildView(snap snapshot) view {
 		v.Err = snap.err.Error()
 	}
 
-	for _, l := range layout {
-		rs := groups[l.bucket]
+	// 1) One section per workflow stage: every reviewable PR appears exactly once.
+	byStage := map[triage.Stage][]triage.Result{}
+	for _, r := range snap.results {
+		if r.Step.Stage != triage.StageNone {
+			byStage[r.Step.Stage] = append(byStage[r.Step.Stage], r)
+		}
+	}
+	for _, st := range triage.StageOrder {
+		rs := byStage[st]
 		if len(rs) == 0 {
 			continue
 		}
-		sec := section{ID: string(l.bucket), Title: l.title, Blurb: l.blurb, Collapsed: l.collapsed}
+		title, blurb, collapsed := s.stageInfo(st)
+		sec := section{ID: string(st), Title: title, Blurb: blurb, Collapsed: collapsed}
 		for _, r := range rs {
-			action, _ := r.In(l.bucket)
-			sec.Rows = append(sec.Rows, row{
-				URL: r.PR.URL, Ref: fmt.Sprintf("#%d", r.PR.Number), Title: r.PR.Title, Author: r.PR.Author,
-				Age: render.Age(now.Sub(r.PR.CreatedAt)), Active: render.Age(now.Sub(r.PR.UpdatedAt)) + " ago",
-				Action: action, Draft: r.PR.Draft,
-			})
+			sec.Rows = append(sec.Rows, s.makeRow(r, now, r.Step.Action, r.Step.Why))
+		}
+		v.Sections = append(v.Sections, sec)
+	}
+
+	// 2) Cross-cutting sections from the buckets.
+	for _, x := range extras {
+		rs := groups[x.bucket]
+		if len(rs) == 0 {
+			continue
+		}
+		sec := section{ID: string(x.bucket), Title: x.title, Blurb: x.blurb, Collapsed: x.collapsed}
+		for _, r := range rs {
+			action, _ := r.In(x.bucket)
+			sec.Rows = append(sec.Rows, s.makeRow(r, now, action, ""))
 		}
 		v.Sections = append(v.Sections, sec)
 	}
 	return v
 }
 
-func joinRepos(repos []string) string {
-	out := ""
-	for i, r := range repos {
-		if i > 0 {
-			out += ", "
-		}
-		out += r
+func (s *Server) makeRow(r triage.Result, now time.Time, action, why string) row {
+	rw := row{
+		URL: r.PR.URL, Ref: fmt.Sprintf("#%d", r.PR.Number), Title: r.PR.Title, Author: r.PR.Author,
+		Age: render.Age(now.Sub(r.PR.CreatedAt)), Active: render.Age(now.Sub(r.PR.UpdatedAt)) + " ago",
+		Action: action, Why: why, CopyLabel: r.Step.CopyLabel, CopyText: r.Step.CopyText, Draft: r.PR.Draft,
 	}
-	return out
+	if s.analyzer != nil {
+		av := &aiView{ID: aiDomID(r.PR), Path: aiPath(r.PR), Model: s.aiModel}
+		if res, ok := s.cachedAnalysis(r.PR); ok {
+			av.Result, av.HasResult = res, true
+		}
+		rw.AI = av
+	}
+	return rw
 }

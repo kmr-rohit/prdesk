@@ -55,7 +55,9 @@ type jsonPR struct {
 	Author   string `json:"author"`
 	AgeDays  int    `json:"ageDays"`
 	IdleDays int    `json:"idleDays"`
-	Action   string `json:"action"`
+	Action   string `json:"action"`   // why it is in this bucket
+	Stage    string `json:"stage"`    // review workflow stage (see triage.Stage)
+	NextStep string `json:"nextStep"` // the single next thing to do on this PR
 }
 
 type jsonReport struct {
@@ -78,6 +80,8 @@ func JSON(w io.Writer, results []triage.Result, now time.Time, only map[triage.B
 				AgeDays:  int(now.Sub(r.PR.CreatedAt).Hours() / 24),
 				IdleDays: int(now.Sub(r.PR.UpdatedAt).Hours() / 24),
 				Action:   action,
+				Stage:    string(r.Step.Stage),
+				NextStep: r.Step.Action,
 			})
 		}
 		rep.Counts[string(b)] = len(rs)

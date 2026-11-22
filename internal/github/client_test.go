@@ -142,3 +142,35 @@ func TestFetchOpenPRsErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestFetchDiff(t *testing.T) {
+	const diff = "diff --git a/x b/x\n+hello\n"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/repos/kubeflow/docs-agent/pulls/7" || r.Header.Get("Accept") != "application/vnd.github.v3.diff" {
+			http.Error(w, "bad request: "+r.URL.Path+" "+r.Header.Get("Accept"), http.StatusBadRequest)
+			return
+		}
+		w.Write([]byte(diff))
+	}))
+	defer srv.Close()
+	c := NewClient("t")
+	c.RESTBase = srv.URL
+
+	t.Run("whole diff", func(t *testing.T) {
+		got, trunc, err := c.FetchDiff(context.Background(), "kubeflow/docs-agent", 7, 1000)
+		if err != nil || trunc || got != diff {
+			t.Errorf("got (%q, %v, %v)", got, trunc, err)
+		}
+	})
+	t.Run("truncated at limit", func(t *testing.T) {
+		got, trunc, err := c.FetchDiff(context.Background(), "kubeflow/docs-agent", 7, 10)
+		if err != nil || !trunc || got != diff[:10] {
+			t.Errorf("got (%q, %v, %v)", got, trunc, err)
+		}
+	})
+	t.Run("http error", func(t *testing.T) {
+		if _, _, err := c.FetchDiff(context.Background(), "kubeflow/docs-agent", 8, 10); err == nil {
+			t.Error("expected error for a non-200 response")
+		}
+	})
+}

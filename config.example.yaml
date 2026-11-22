@@ -9,3 +9,9 @@ eval_command: /eval           # leave empty to disable the needs-eval bucket
 eval_paths:                   # only PRs touching these path prefixes need /eval (empty = all)
   - docs-agent-mcp/mcp-server/
   - docs-agent-mcp/pipelines/
+approver: tarekabouzeid       # maintainer who comments /ok-to-test and /eval for you
+ai:
+  enabled: true
+  url: http://localhost:11434
+  model: gemma4:26b-a4b
+  max_diff_chars: 24000

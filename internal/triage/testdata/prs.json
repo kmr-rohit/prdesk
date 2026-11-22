@@ -621,5 +621,461 @@
   "HeadSHA": "aaaa1111",
   "CreatedAt": "2026-11-01T10:00:00Z",
   "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_unreviewed": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 30,
+  "Title": "scenario 30",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/30",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-19T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_review_requested": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 31,
+  "Title": "scenario 31",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/31",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [
+   "kmr-rohit"
+  ],
+  "Reviews": [],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-19T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_commented_only": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 32,
+  "Title": "scenario 32",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/32",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "COMMENTED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_changes_requested_by_me": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 33,
+  "Title": "scenario 33",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/33",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "CHANGES_REQUESTED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_pushed_after_approval": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 34,
+  "Title": "scenario 34",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/34",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-10T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-15T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_awaiting_ci": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 35,
+  "Title": "scenario 35",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/35",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": true,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_no_ci": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 36,
+  "Title": "scenario 36",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/36",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_ci_failed": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 37,
+  "Title": "scenario 37",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/37",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "FAILURE",
+  "FailedChecks": [
+   "lint"
+  ],
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_ci_pending": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 38,
+  "Title": "scenario 38",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/38",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "PENDING",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_needs_eval": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 39,
+  "Title": "scenario 39",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/39",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [
+   "docs-agent-mcp/mcp-server/server.py"
+  ],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_eval_current": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 40,
+  "Title": "scenario 40",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/40",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [
+   "eval",
+   "eval-sha:aaaa111"
+  ],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [
+   "docs-agent-mcp/mcp-server/server.py"
+  ],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_approved_readme_only": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 41,
+  "Title": "scenario 41",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/41",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [
+   "README.md"
+  ],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_ready_labels": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 42,
+  "Title": "scenario 42",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/42",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [
+   "lgtm",
+   "approved"
+  ],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_conflict_after_approval": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 43,
+  "Title": "scenario 43",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/43",
+  "Draft": false,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [
+   {
+    "Author": "kmr-rohit",
+    "State": "APPROVED",
+    "SubmittedAt": "2026-11-18T10:00:00Z"
+   }
+  ],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-17T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "CONFLICTING",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_draft": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 44,
+  "Title": "scenario 44",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/44",
+  "Draft": true,
+  "Author": "alice",
+  "AuthorAssociation": "CONTRIBUTOR",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-19T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
+ },
+ "wf_mine": {
+  "Repo": "kubeflow/docs-agent",
+  "Number": 45,
+  "Title": "scenario 45",
+  "URL": "https://github.com/kubeflow/docs-agent/pull/45",
+  "Draft": false,
+  "Author": "kmr-rohit",
+  "AuthorAssociation": "OWNER",
+  "Labels": [],
+  "ReviewRequests": [],
+  "Reviews": [],
+  "Comments": [],
+  "Files": [],
+  "HeadCommittedAt": "2026-11-19T10:00:00Z",
+  "CheckState": "SUCCESS",
+  "FailedChecks": null,
+  "AwaitingApproval": false,
+  "ReviewDecision": "",
+  "Mergeable": "MERGEABLE",
+  "HeadSHA": "aaaa1111",
+  "CreatedAt": "2026-11-01T10:00:00Z",
+  "UpdatedAt": "2026-11-20T10:00:00Z"
  }
 }

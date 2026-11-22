@@ -28,6 +28,7 @@ func loadFixtures(t *testing.T) map[string]github.PullRequest {
 func baseOptions() Options {
 	return Options{
 		Login:                "kmr-rohit",
+		Approver:             "tarekabouzeid",
 		Teams:                []string{"docs-reviewers"},
 		StaleAfter:           14 * 24 * time.Hour,
 		AgendaLabel:          "community-meeting",
