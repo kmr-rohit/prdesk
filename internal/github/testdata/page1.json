@@ -1,0 +1,49 @@
+{
+  "data": {
+    "rateLimit": {"cost": 1, "remaining": 4999, "resetAt": "2026-11-22T13:00:00Z"},
+    "repository": {
+      "pullRequests": {
+        "pageInfo": {"hasNextPage": true, "endCursor": "CURSOR_1"},
+        "nodes": [
+          {
+            "number": 101,
+            "title": "docs: add KServe quickstart",
+            "url": "https://github.com/kubeflow/docs-agent/pull/101",
+            "isDraft": false,
+            "createdAt": "2026-11-01T10:00:00Z",
+            "updatedAt": "2026-11-20T09:00:00Z",
+            "authorAssociation": "FIRST_TIME_CONTRIBUTOR",
+            "reviewDecision": null,
+            "author": {"login": "newcomer"},
+            "labels": {"nodes": [{"name": "needs-ok-to-test"}, {"name": "community-meeting"}]},
+            "reviewRequests": {"nodes": [
+              {"requestedReviewer": {"__typename": "User", "login": "kmr-rohit"}},
+              {"requestedReviewer": {"__typename": "Team", "slug": "docs-reviewers"}}
+            ]},
+            "reviews": {"nodes": []},
+            "comments": {"nodes": [{"createdAt": "2026-11-20T09:00:00Z", "author": {"login": "newcomer"}}]},
+            "commits": {"nodes": [{"commit": {"committedDate": "2026-11-19T08:00:00Z", "statusCheckRollup": null}}]}
+          },
+          {
+            "number": 99,
+            "title": "fix: broken link in pipelines page",
+            "url": "https://github.com/kubeflow/docs-agent/pull/99",
+            "isDraft": false,
+            "createdAt": "2026-10-01T10:00:00Z",
+            "updatedAt": "2026-10-05T09:00:00Z",
+            "authorAssociation": "MEMBER",
+            "reviewDecision": "CHANGES_REQUESTED",
+            "author": null,
+            "labels": {"nodes": []},
+            "reviewRequests": {"nodes": []},
+            "reviews": {"nodes": [
+              {"state": "CHANGES_REQUESTED", "submittedAt": "2026-10-05T09:00:00Z", "author": {"login": "kmr-rohit"}}
+            ]},
+            "comments": {"nodes": []},
+            "commits": {"nodes": [{"commit": {"committedDate": "2026-10-02T08:00:00Z", "statusCheckRollup": {"state": "FAILURE"}}}]}
+          }
+        ]
+      }
+    }
+  }
+}

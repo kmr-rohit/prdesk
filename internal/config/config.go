@@ -34,7 +34,7 @@ func Load(path string) (*Config, error) {
 		return nil, fmt.Errorf("reading config: %w", err)
 	}
 
-	var c Config // zero value: "" / nil / 0. Go has no uninitialised variables.
+	var c Config                                     // zero value: "" / nil / 0. Go has no uninitialised variables.
 	if err := yaml.Unmarshal(data, &c); err != nil { // &c = pointer, so Unmarshal can fill it in
 		return nil, fmt.Errorf("parsing %s: %w", path, err)
 	}

@@ -6,11 +6,16 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 
 	"github.com/rohikuma/prdesk/internal/config"
+	"github.com/rohikuma/prdesk/internal/github"
 )
 
 func main() {
@@ -48,8 +53,33 @@ func runTriage(args []string) error {
 		return err
 	}
 
-	// Placeholder: step 2 will fetch real PRs from GitHub here.
-	fmt.Printf("login=%s repos=%v stale_days=%d json=%v\n",
-		cfg.Login, cfg.Repos, cfg.StaleDays, *asJSON)
+	token := os.Getenv("GITHUB_TOKEN")
+	if token == "" {
+		return errors.New("GITHUB_TOKEN is not set")
+	}
+
+	// signal.NotifyContext cancels ctx on Ctrl-C, aborting in-flight requests.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	client := github.NewClient(token)
+	var all []github.PullRequest
+	for _, repo := range cfg.Repos { // sequential for now; step 5 makes this concurrent
+		prs, err := client.FetchOpenPRs(ctx, repo)
+		if err != nil {
+			return err
+		}
+		all = append(all, prs...)
+	}
+
+	if *asJSON {
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(all)
+	}
+	// Placeholder output: step 3 (classifier) and step 4 (tables) replace this.
+	for _, p := range all {
+		fmt.Printf("%s#%d  %-14s %s\n", p.Repo, p.Number, p.Author, p.Title)
+	}
 	return nil
 }

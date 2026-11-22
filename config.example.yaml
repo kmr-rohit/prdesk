@@ -1,4 +1,4 @@
-login: your-github-login      # PRs you authored / reviews requested from you
+login: kmr-rohit               # PRs you authored / reviews requested from you
 repos:
   - kubeflow/docs-agent
 stale_days: 14                # no activity for this long => "stale"

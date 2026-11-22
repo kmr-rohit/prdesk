@@ -1,0 +1,28 @@
+{
+  "data": {
+    "rateLimit": {"cost": 1, "remaining": 4998, "resetAt": "2026-11-22T13:00:00Z"},
+    "repository": {
+      "pullRequests": {
+        "pageInfo": {"hasNextPage": false, "endCursor": "CURSOR_2"},
+        "nodes": [
+          {
+            "number": 80,
+            "title": "chore: bump hugo",
+            "url": "https://github.com/kubeflow/docs-agent/pull/80",
+            "isDraft": true,
+            "createdAt": "2026-09-01T10:00:00Z",
+            "updatedAt": "2026-09-02T09:00:00Z",
+            "authorAssociation": "OWNER",
+            "reviewDecision": "APPROVED",
+            "author": {"login": "kmr-rohit"},
+            "labels": {"nodes": [{"name": "lgtm"}, {"name": "approved"}]},
+            "reviewRequests": {"nodes": []},
+            "reviews": {"nodes": []},
+            "comments": {"nodes": []},
+            "commits": {"nodes": [{"commit": {"committedDate": "2026-09-02T08:00:00Z", "statusCheckRollup": {"state": "SUCCESS"}}}]}
+          }
+        ]
+      }
+    }
+  }
+}
