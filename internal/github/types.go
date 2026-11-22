@@ -19,8 +19,12 @@ type PullRequest struct {
 	Reviews           []Review
 	Comments          []Comment // most recent few
 	HeadCommittedAt   time.Time // time of the latest push (approximated by last commit)
-	CheckState        string    // SUCCESS, FAILURE, ERROR, PENDING, EXPECTED, or "" if no checks ran
+	CheckState        string    // SUCCESS, FAILURE, PENDING, or "" if no checks ran (ignored checks excluded)
+	FailedChecks      []string  // names of failing checks, for suggested actions
+	AwaitingApproval  bool      // workflow runs blocked until a maintainer approves them
 	ReviewDecision    string    // APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or ""
+	Mergeable         string    // MERGEABLE, CONFLICTING, UNKNOWN
+	HeadSHA           string    // commit the PR currently points at
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

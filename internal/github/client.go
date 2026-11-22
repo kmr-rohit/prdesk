@@ -20,15 +20,19 @@ const defaultEndpoint = "https://api.github.com/graphql"
 // that in tests to point the client at a fake local server.
 type Client struct {
 	Endpoint string
-	token    string
-	http     *http.Client
+	// IgnoredChecks are check/status names excluded from CheckState. Default
+	// {"tide"}: Prow's merge gate is "pending" on nearly every PR by design.
+	IgnoredChecks []string
+	token         string
+	http          *http.Client
 }
 
 func NewClient(token string) *Client {
 	return &Client{
-		Endpoint: defaultEndpoint,
-		token:    token,
-		http:     &http.Client{Timeout: 30 * time.Second},
+		Endpoint:      defaultEndpoint,
+		IgnoredChecks: []string{"tide"},
+		token:         token,
+		http:          &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
@@ -41,7 +45,7 @@ query($owner: String!, $name: String!, $cursor: String) {
       pageInfo { hasNextPage endCursor }
       nodes {
         number title url isDraft createdAt updatedAt
-        authorAssociation reviewDecision
+        authorAssociation reviewDecision mergeable headRefOid
         author { login }
         labels(first: 30) { nodes { name } }
         reviewRequests(first: 20) {
@@ -50,7 +54,15 @@ query($owner: String!, $name: String!, $cursor: String) {
         reviews(last: 30) { nodes { state submittedAt author { login } } }
         comments(last: 10) { nodes { createdAt author { login } } }
         commits(last: 1) {
-          nodes { commit { committedDate statusCheckRollup { state } } }
+          nodes { commit {
+            committedDate
+            statusCheckRollup { contexts(first: 50) { nodes {
+              __typename
+              ... on CheckRun { name status conclusion }
+              ... on StatusContext { context state }
+            } } }
+            checkSuites(first: 20) { nodes { conclusion app { slug } } }
+          } }
         }
       }
     }
@@ -80,7 +92,7 @@ func (c *Client) FetchOpenPRs(ctx context.Context, repo string) ([]PullRequest, 
 
 		page := resp.Repository.PullRequests
 		for _, n := range page.Nodes {
-			all = append(all, n.toPullRequest(repo))
+			all = append(all, n.toPullRequest(repo, c.IgnoredChecks))
 		}
 		if !page.PageInfo.HasNextPage {
 			return all, nil

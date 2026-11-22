@@ -75,8 +75,16 @@ func TestFetchOpenPRs(t *testing.T) {
 		if len(p.ReviewRequests) != 2 || p.ReviewRequests[0] != "kmr-rohit" || p.ReviewRequests[1] != "docs-reviewers" {
 			t.Errorf("review requests = %v", p.ReviewRequests)
 		}
-		if p.CheckState != "" {
-			t.Errorf("CheckState = %q, want empty (no CI ran)", p.CheckState)
+		// tide (ignored) is pending and DCO passed, so only DCO counts...
+		if p.CheckState != "SUCCESS" {
+			t.Errorf("CheckState = %q, want SUCCESS (tide ignored, DCO passed)", p.CheckState)
+		}
+		// ...but the Actions suite is blocked waiting for approval.
+		if !p.AwaitingApproval {
+			t.Error("AwaitingApproval = false, want true")
+		}
+		if p.HeadSHA != "abc1234def" || p.Mergeable != "MERGEABLE" {
+			t.Errorf("HeadSHA/Mergeable = %q/%q", p.HeadSHA, p.Mergeable)
 		}
 	})
 
@@ -85,7 +93,13 @@ func TestFetchOpenPRs(t *testing.T) {
 		if p.Author != "ghost" {
 			t.Errorf("Author = %q, want ghost", p.Author)
 		}
-		if p.CheckState != "FAILURE" || p.ReviewDecision != "CHANGES_REQUESTED" {
+		if p.Mergeable != "CONFLICTING" {
+			t.Errorf("Mergeable = %q, want CONFLICTING", p.Mergeable)
+		}
+		if p.CheckState != "FAILURE" || len(p.FailedChecks) != 1 || p.FailedChecks[0] != "lint" || p.AwaitingApproval {
+			t.Errorf("checks wrong: state=%q failed=%v awaiting=%v", p.CheckState, p.FailedChecks, p.AwaitingApproval)
+		}
+		if p.ReviewDecision != "CHANGES_REQUESTED" {
 			t.Errorf("state wrong: %+v", p)
 		}
 		if len(p.Reviews) != 1 || p.Reviews[0].Author != "kmr-rohit" {
@@ -95,6 +109,7 @@ func TestFetchOpenPRs(t *testing.T) {
 
 	t.Run("page two draft PR", func(t *testing.T) {
 		p := byNum[80]
+		// tide is PENDING but ignored, so the PR reads as green.
 		if !p.Draft || p.CheckState != "SUCCESS" || p.HeadCommittedAt.IsZero() {
 			t.Errorf("unexpected: %+v", p)
 		}

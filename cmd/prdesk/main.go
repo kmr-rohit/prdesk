@@ -13,9 +13,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/rohikuma/prdesk/internal/config"
 	"github.com/rohikuma/prdesk/internal/github"
+	"github.com/rohikuma/prdesk/internal/triage"
 )
 
 func main() {
@@ -72,14 +74,25 @@ func runTriage(args []string) error {
 		all = append(all, prs...)
 	}
 
+	results := triage.ClassifyAll(all, triage.OptionsFromConfig(cfg, time.Now()))
+
 	if *asJSON {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
-		return enc.Encode(all)
+		return enc.Encode(results)
 	}
-	// Placeholder output: step 3 (classifier) and step 4 (tables) replace this.
-	for _, p := range all {
-		fmt.Printf("%s#%d  %-14s %s\n", p.Repo, p.Number, p.Author, p.Title)
+	// Plain grouped output. Step 4 replaces this with aligned tables.
+	groups := triage.Group(results)
+	for _, b := range triage.AllBuckets {
+		rs := groups[b]
+		if len(rs) == 0 {
+			continue
+		}
+		fmt.Printf("\n== %s (%d)\n", b, len(rs))
+		for _, r := range rs {
+			action, _ := r.In(b)
+			fmt.Printf("  #%-4d %-16s %s\n         -> %s\n", r.PR.Number, r.PR.Author, r.PR.Title, action)
+		}
 	}
 	return nil
 }

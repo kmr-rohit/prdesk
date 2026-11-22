@@ -3,3 +3,6 @@ repos:
   - kubeflow/docs-agent
 stale_days: 14                # no activity for this long => "stale"
 agenda_label: community-meeting
+teams: []                     # team slugs whose review requests count as "waiting on me"
+ready_labels: [lgtm, approved] # ALL required for ready-to-merge (Prow style)
+eval_command: /eval           # leave empty to disable the needs-eval bucket

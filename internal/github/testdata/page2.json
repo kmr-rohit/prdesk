@@ -19,7 +19,7 @@
             "reviewRequests": {"nodes": []},
             "reviews": {"nodes": []},
             "comments": {"nodes": []},
-            "commits": {"nodes": [{"commit": {"committedDate": "2026-09-02T08:00:00Z", "statusCheckRollup": {"state": "SUCCESS"}}}]}
+            "commits": {"nodes": [{"commit": {"committedDate": "2026-09-02T08:00:00Z", "statusCheckRollup": {"contexts": {"nodes": [{"__typename": "StatusContext", "context": "tide", "state": "PENDING"}, {"__typename": "CheckRun", "name": "build", "status": "COMPLETED", "conclusion": "SUCCESS"}]}}, "checkSuites": {"nodes": [{"conclusion": "SUCCESS"}]}}}]}
           }
         ]
       }

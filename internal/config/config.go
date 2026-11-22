@@ -21,6 +21,13 @@ type Config struct {
 	Repos       []string `yaml:"repos"`
 	StaleDays   int      `yaml:"stale_days"`
 	AgendaLabel string   `yaml:"agenda_label"`
+
+	// Teams whose review requests count as "waiting on me" (team slugs).
+	Teams []string `yaml:"teams"`
+	// Labels that must ALL be present for ready-to-merge (Prow: lgtm + approved).
+	ReadyLabels []string `yaml:"ready_labels"`
+	// Comment command that starts an eval run, e.g. "/eval". Empty disables needs-eval.
+	EvalCommand string `yaml:"eval_command"`
 }
 
 // Load reads path, applies defaults and validates.
@@ -41,6 +48,9 @@ func Load(path string) (*Config, error) {
 
 	if c.StaleDays == 0 {
 		c.StaleDays = 14
+	}
+	if len(c.ReadyLabels) == 0 {
+		c.ReadyLabels = []string{"lgtm", "approved"}
 	}
 	if err := c.validate(); err != nil {
 		return nil, err

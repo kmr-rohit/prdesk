@@ -40,6 +40,8 @@ type prNode struct {
 	UpdatedAt         time.Time `json:"updatedAt"`
 	AuthorAssociation string    `json:"authorAssociation"`
 	ReviewDecision    string    `json:"reviewDecision"` // null => ""
+	Mergeable         string    `json:"mergeable"`
+	HeadRefOid        string    `json:"headRefOid"`
 	Author            *actor    `json:"author"`
 	Labels            struct {
 		Nodes []struct {
@@ -72,14 +74,21 @@ type prNode struct {
 			Commit struct {
 				CommittedDate     time.Time `json:"committedDate"`
 				StatusCheckRollup *struct {
-					State string `json:"state"`
+					Contexts struct {
+						Nodes []checkContext `json:"nodes"`
+					} `json:"contexts"`
 				} `json:"statusCheckRollup"`
+				CheckSuites struct {
+					Nodes []struct {
+						Conclusion string `json:"conclusion"`
+					} `json:"nodes"`
+				} `json:"checkSuites"`
 			} `json:"commit"`
 		} `json:"nodes"`
 	} `json:"commits"`
 }
 
-func (n prNode) toPullRequest(repo string) PullRequest {
+func (n prNode) toPullRequest(repo string, ignoredChecks []string) PullRequest {
 	pr := PullRequest{
 		Repo:              repo,
 		Number:            n.Number,
@@ -89,6 +98,8 @@ func (n prNode) toPullRequest(repo string) PullRequest {
 		Author:            n.Author.name(),
 		AuthorAssociation: n.AuthorAssociation,
 		ReviewDecision:    n.ReviewDecision,
+		Mergeable:         n.Mergeable,
+		HeadSHA:           n.HeadRefOid,
 		CreatedAt:         n.CreatedAt,
 		UpdatedAt:         n.UpdatedAt,
 	}
@@ -115,7 +126,14 @@ func (n prNode) toPullRequest(repo string) PullRequest {
 		c := n.Commits.Nodes[0].Commit
 		pr.HeadCommittedAt = c.CommittedDate
 		if c.StatusCheckRollup != nil {
-			pr.CheckState = c.StatusCheckRollup.State
+			pr.CheckState, pr.FailedChecks = summarizeChecks(c.StatusCheckRollup.Contexts.Nodes, ignoredChecks)
+		}
+		for _, cs := range c.CheckSuites.Nodes {
+			// GitHub Actions runs from first-time contributors sit as
+			// ACTION_REQUIRED until a maintainer approves them.
+			if cs.Conclusion == "ACTION_REQUIRED" {
+				pr.AwaitingApproval = true
+			}
 		}
 	}
 	return pr
