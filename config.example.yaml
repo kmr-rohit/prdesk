@@ -6,3 +6,6 @@ agenda_label: community-meeting
 teams: []                     # team slugs whose review requests count as "waiting on me"
 ready_labels: [lgtm, approved] # ALL required for ready-to-merge (Prow style)
 eval_command: /eval           # leave empty to disable the needs-eval bucket
+eval_paths:                   # only PRs touching these path prefixes need /eval (empty = all)
+  - docs-agent-mcp/mcp-server/
+  - docs-agent-mcp/pipelines/

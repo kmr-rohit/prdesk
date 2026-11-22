@@ -48,6 +48,11 @@ type prNode struct {
 			Name string `json:"name"`
 		} `json:"nodes"`
 	} `json:"labels"`
+	Files struct {
+		Nodes []struct {
+			Path string `json:"path"`
+		} `json:"nodes"`
+	} `json:"files"`
 	ReviewRequests struct {
 		Nodes []struct {
 			RequestedReviewer *struct {
@@ -105,6 +110,9 @@ func (n prNode) toPullRequest(repo string, ignoredChecks []string) PullRequest {
 	}
 	for _, l := range n.Labels.Nodes {
 		pr.Labels = append(pr.Labels, l.Name)
+	}
+	for _, f := range n.Files.Nodes {
+		pr.Files = append(pr.Files, f.Path)
 	}
 	for _, rr := range n.ReviewRequests.Nodes {
 		if rr.RequestedReviewer == nil {

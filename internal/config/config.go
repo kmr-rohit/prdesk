@@ -28,6 +28,8 @@ type Config struct {
 	ReadyLabels []string `yaml:"ready_labels"`
 	// Comment command that starts an eval run, e.g. "/eval". Empty disables needs-eval.
 	EvalCommand string `yaml:"eval_command"`
+	// If set, needs-eval only fires for PRs changing a file under one of these prefixes.
+	EvalPaths []string `yaml:"eval_paths"`
 }
 
 // Load reads path, applies defaults and validates.

@@ -7,37 +7,38 @@ import "time"
 // only ever sees this type, never raw API JSON. That keeps the classifier a
 // pure function: easy to test, and independent of GitHub's response shape.
 type PullRequest struct {
-	Repo              string // "owner/name"
-	Number            int
-	Title             string
-	URL               string
-	Draft             bool
-	Author            string
-	AuthorAssociation string // FIRST_TIME_CONTRIBUTOR, MEMBER, OWNER, ...
-	Labels            []string
-	ReviewRequests    []string // user logins or team slugs
-	Reviews           []Review
-	Comments          []Comment // most recent few
-	HeadCommittedAt   time.Time // time of the latest push (approximated by last commit)
-	CheckState        string    // SUCCESS, FAILURE, PENDING, or "" if no checks ran (ignored checks excluded)
-	FailedChecks      []string  // names of failing checks, for suggested actions
-	AwaitingApproval  bool      // workflow runs blocked until a maintainer approves them
-	ReviewDecision    string    // APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or ""
-	Mergeable         string    // MERGEABLE, CONFLICTING, UNKNOWN
-	HeadSHA           string    // commit the PR currently points at
-	CreatedAt         time.Time
-	UpdatedAt         time.Time
+	Repo              string    `json:"repo"` // "owner/name"
+	Number            int       `json:"number"`
+	Title             string    `json:"title"`
+	URL               string    `json:"url"`
+	Draft             bool      `json:"draft"`
+	Author            string    `json:"author"`
+	AuthorAssociation string    `json:"authorAssociation"` // FIRST_TIME_CONTRIBUTOR, MEMBER, OWNER, ...
+	Labels            []string  `json:"labels"`
+	ReviewRequests    []string  `json:"reviewRequests"` // user logins or team slugs
+	Reviews           []Review  `json:"reviews"`
+	Comments          []Comment `json:"comments"`        // most recent few
+	Files             []string  `json:"files"`           // changed paths (first 100)
+	HeadCommittedAt   time.Time `json:"headCommittedAt"` // latest push (approximated by last commit)
+	CheckState        string    `json:"checkState"`      // SUCCESS, FAILURE, PENDING, or "" if no checks ran (ignored checks excluded)
+	FailedChecks      []string  `json:"failedChecks"`
+	AwaitingApproval  bool      `json:"awaitingApproval"` // workflow runs blocked until a maintainer approves them
+	ReviewDecision    string    `json:"reviewDecision"`   // APPROVED, CHANGES_REQUESTED, REVIEW_REQUIRED, or ""
+	Mergeable         string    `json:"mergeable"`        // MERGEABLE, CONFLICTING, UNKNOWN
+	HeadSHA           string    `json:"headSha"`          // commit the PR currently points at
+	CreatedAt         time.Time `json:"createdAt"`
+	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
 type Review struct {
-	Author      string
-	State       string // APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED
-	SubmittedAt time.Time
+	Author      string    `json:"author"`
+	State       string    `json:"state"` // APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED
+	SubmittedAt time.Time `json:"submittedAt"`
 }
 
 type Comment struct {
-	Author    string
-	CreatedAt time.Time
+	Author    string    `json:"author"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 // HasLabel reports whether the PR carries the given label.

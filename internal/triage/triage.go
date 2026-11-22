@@ -42,6 +42,7 @@ type Options struct {
 	AgendaLabel          string
 	ReadyLabels          []string // ALL must be present for ready-to-merge
 	EvalCommand          string   // e.g. "/eval"; empty disables needs-eval
+	EvalPaths            []string // if set, only PRs touching these prefixes need eval
 	NewContributorWindow time.Duration
 	Now                  time.Time
 }
@@ -54,6 +55,7 @@ func OptionsFromConfig(c *config.Config, now time.Time) Options {
 		AgendaLabel:          c.AgendaLabel,
 		ReadyLabels:          c.ReadyLabels,
 		EvalCommand:          c.EvalCommand,
+		EvalPaths:            c.EvalPaths,
 		NewContributorWindow: 7 * 24 * time.Hour,
 		Now:                  now,
 	}
@@ -61,14 +63,14 @@ func OptionsFromConfig(c *config.Config, now time.Time) Options {
 
 // Finding says a PR is in a bucket and what the maintainer should do about it.
 type Finding struct {
-	Bucket Bucket
-	Action string
+	Bucket Bucket `json:"bucket"`
+	Action string `json:"action"`
 }
 
 // Result is one PR plus every bucket it landed in (possibly none).
 type Result struct {
-	PR       github.PullRequest
-	Findings []Finding
+	PR       github.PullRequest `json:"pr"`
+	Findings []Finding          `json:"findings"`
 }
 
 // In reports whether the PR is in bucket b, and the suggested action.

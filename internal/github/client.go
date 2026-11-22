@@ -48,6 +48,7 @@ query($owner: String!, $name: String!, $cursor: String) {
         authorAssociation reviewDecision mergeable headRefOid
         author { login }
         labels(first: 30) { nodes { name } }
+        files(first: 100) { nodes { path } }
         reviewRequests(first: 20) {
           nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } } }
         }

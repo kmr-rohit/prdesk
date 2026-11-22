@@ -7,16 +7,17 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/rohikuma/prdesk/internal/config"
 	"github.com/rohikuma/prdesk/internal/github"
+	"github.com/rohikuma/prdesk/internal/render"
 	"github.com/rohikuma/prdesk/internal/triage"
 )
 
@@ -48,9 +49,15 @@ func runTriage(args []string) error {
 	fs := flag.NewFlagSet("triage", flag.ExitOnError)
 	cfgPath := fs.String("config", "config.yaml", "path to config file")
 	asJSON := fs.Bool("json", false, "print JSON instead of tables")
+	bucketFlag := fs.String("bucket", "", "only show these buckets (comma-separated), e.g. waiting-on-me,stale")
 	fs.Parse(args)
 
 	cfg, err := config.Load(*cfgPath)
+	if err != nil {
+		return err
+	}
+
+	only, err := parseBuckets(*bucketFlag) // validate flags before any network call
 	if err != nil {
 		return err
 	}
@@ -74,25 +81,31 @@ func runTriage(args []string) error {
 		all = append(all, prs...)
 	}
 
-	results := triage.ClassifyAll(all, triage.OptionsFromConfig(cfg, time.Now()))
+	now := time.Now()
+	results := triage.ClassifyAll(all, triage.OptionsFromConfig(cfg, now))
 
 	if *asJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(results)
+		return render.JSON(os.Stdout, results, now, only)
 	}
-	// Plain grouped output. Step 4 replaces this with aligned tables.
-	groups := triage.Group(results)
+	return render.Tables(os.Stdout, results, now, only)
+}
+
+// parseBuckets turns "stale,mine" into a lookup set, rejecting typos.
+func parseBuckets(csv string) (map[triage.Bucket]bool, error) {
+	if csv == "" {
+		return nil, nil // nil = no filter
+	}
+	valid := map[triage.Bucket]bool{}
 	for _, b := range triage.AllBuckets {
-		rs := groups[b]
-		if len(rs) == 0 {
-			continue
-		}
-		fmt.Printf("\n== %s (%d)\n", b, len(rs))
-		for _, r := range rs {
-			action, _ := r.In(b)
-			fmt.Printf("  #%-4d %-16s %s\n         -> %s\n", r.PR.Number, r.PR.Author, r.PR.Title, action)
-		}
+		valid[b] = true
 	}
-	return nil
+	only := map[triage.Bucket]bool{}
+	for _, name := range strings.Split(csv, ",") {
+		b := triage.Bucket(strings.TrimSpace(name))
+		if !valid[b] {
+			return nil, fmt.Errorf("unknown bucket %q (valid: %v)", name, triage.AllBuckets)
+		}
+		only[b] = true
+	}
+	return only, nil
 }

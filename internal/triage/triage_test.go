@@ -42,6 +42,11 @@ func baseOptions() Options {
 func TestClassify(t *testing.T) {
 	withEval := func(o *Options) { o.EvalCommand = "/eval" }
 
+	withEvalPaths := func(o *Options) {
+		o.EvalCommand = "/eval"
+		o.EvalPaths = []string{"docs-agent-mcp/mcp-server/", "docs-agent-mcp/pipelines/"}
+	}
+
 	tests := []struct {
 		fixture string
 		tweak   func(*Options) // nil = baseOptions as-is
@@ -60,6 +65,9 @@ func TestClassify(t *testing.T) {
 		// needs-eval (only when eval_command is configured)
 		{"ci_green_no_eval", withEval, []Bucket{NeedsEval}},
 		{"ci_green_no_eval", nil, nil}, // eval disabled => nothing
+		{"green_touches_mcp", withEvalPaths, []Bucket{NeedsEval}},
+		{"green_readme_only", withEvalPaths, nil},            // outside eval_paths: unit tests are enough
+		{"green_readme_only", withEval, []Bucket{NeedsEval}}, // no eval_paths => every PR
 		{"eval_current", withEval, nil},
 		{"eval_stale_after_push", withEval, []Bucket{NeedsEval}},
 
@@ -88,7 +96,7 @@ func TestClassify(t *testing.T) {
 	for _, tc := range tests {
 		name := tc.fixture
 		if tc.tweak != nil {
-			name += "/eval-on"
+			name += "/with-opts"
 		}
 		t.Run(name, func(t *testing.T) {
 			pr, ok := fixtures[tc.fixture]

@@ -53,6 +53,9 @@ func needsEval(pr github.PullRequest, o Options) (string, bool) {
 	if o.EvalCommand == "" || pr.Draft || pr.AwaitingApproval || pr.CheckState != "SUCCESS" || pr.Mergeable == "CONFLICTING" {
 		return "", false // eval only makes sense once CI is green and the PR merges cleanly
 	}
+	if !touchesEvalPaths(pr, o) {
+		return "", false // e.g. README-only or test-only change: unit tests are enough
+	}
 	if evalIsCurrent(pr) {
 		return "", false
 	}
@@ -236,4 +239,20 @@ func evalIsCurrent(pr github.PullRequest) bool {
 		return false
 	}
 	return strings.HasPrefix(pr.HeadSHA, sha) || strings.HasPrefix(sha, pr.HeadSHA)
+}
+
+// touchesEvalPaths: true if no eval_paths are configured, or the PR changes a
+// file under one of them.
+func touchesEvalPaths(pr github.PullRequest, o Options) bool {
+	if len(o.EvalPaths) == 0 {
+		return true
+	}
+	for _, f := range pr.Files {
+		for _, prefix := range o.EvalPaths {
+			if strings.HasPrefix(f, prefix) {
+				return true
+			}
+		}
+	}
+	return false
 }
